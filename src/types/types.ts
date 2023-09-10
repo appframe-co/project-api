@@ -10,28 +10,23 @@ export type TErrorResponse = {
   property?: string;
 }
 
-export type TProjectModel = {
+export type TProject = {
   id: string;
   userId: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
 }
-export type TCounterModel = {
-  _id: string;
-  seq: number;
-}
 
-export type TProjectInput = {
-  userId: string;
-  name: string;
-}
+export type TDoc = {[key: string]: any}
 
-export type TProjectOutput = {
+export type TEntry = {
   id: string;
-  name: string;
-  projectNumber: number
+  projectId: string;
+  structureId: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy: string;
+  updatedBy: string;
+  doc: TDoc;
 }
-
-
-

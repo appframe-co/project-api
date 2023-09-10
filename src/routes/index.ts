@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { RoutesInput } from '@/types/types'
+import { RoutesInput, TProject } from '@/types/types'
 import structure from './structure.route'
 
 export default ({ app }: RoutesInput) => {
@@ -16,7 +16,7 @@ export default ({ app }: RoutesInput) => {
                     'Content-Type': 'application/json'
                 }
             });
-            const {projects} = await resFetch.json();
+            const {projects}: {projects: TProject[]} = await resFetch.json();
 
             const {userId, id} = projects[0];
 

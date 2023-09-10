@@ -34,3 +34,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
 app.set('port', process.env.PORT);
 
 server.listen(app.get('port'));
+
+process.once('SIGUSR2', function () {
+    process.kill(process.pid, 'SIGUSR2');
+});
