@@ -30,3 +30,31 @@ export type TEntry = {
   updatedBy: string;
   doc: TDoc;
 }
+
+export type TStructure = {
+  id: string;
+  name: string;
+  code: string;
+  bricks: TBrick[];
+}
+
+type TBrick = {
+  type: string;
+  name: string;
+  key: string;
+  description: string;
+  validations: TValidationBrick[];
+}
+
+type TValidationBrick = {
+  code: string;
+  value: any;
+}
+
+export type TFile = {
+  width: number;
+  height: number;
+  contentType: string;
+  src: string;
+  alt: string;
+}

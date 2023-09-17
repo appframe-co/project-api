@@ -1,7 +1,11 @@
-import { TEntry } from '@/types/types';
+import { TDoc, TEntry, TErrorResponse, TFile, TStructure } from '@/types/types';
 import express, { Request, Response, NextFunction } from 'express';
 
 const router = express.Router();
+
+function isError(data: TErrorResponse | {structures: TStructure[]}): data is TErrorResponse {
+    return (data as TErrorResponse).error !== undefined; 
+}
 
 router.get('/:code', async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -15,11 +19,13 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
                 'Content-Type': 'application/json'
             }
         });
-        const { structures } = await resFetchStructures.json();
+        const data: TErrorResponse | {structures: TStructure[]} = await resFetchStructures.json();
+        if (isError(data)) {
+            throw new Error('Error structure');
+        }
+        const structure = data.structures[0];
 
-        const structureId: string = structures[0]['id'];
-
-        let queryString = `${process.env.URL_ENTRY_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&structureId=${structureId}&limit=${limit}`;
+        let queryString = `${process.env.URL_ENTRY_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&structureId=${structure.id}&limit=${limit}`;
         if (sinceId) {
             queryString += `&sinceId=${sinceId}`;
         }
@@ -31,10 +37,42 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
         });
         const {entries}: {entries: TEntry[]} = await resFetch.json();
 
-        const output = entries.map(entry => ({
-            id: entry.id,
-            ...entry.doc
-        }))
+        const types = ['file_reference', 'list.file_reference'];
+        const bricksOfFilesRef = structure.bricks.filter(b => types.includes(b.type)).map(b => ({key: b.key, type: b.type}));
+
+        const output = entries.map(entry => {
+            const doc: TDoc = {id: entry.id};
+
+            for (const [key, value] of Object.entries(entry.doc)) {
+                const brickFile = bricksOfFilesRef.find(b => b.key === key);
+                if (!brickFile) {
+                    break;
+                }
+
+                if (brickFile.type === 'file_reference') {
+                    const file: TFile = value;
+                    doc[key] = {
+                        width: file.width,
+                        height: file.height,
+                        contentType: file.contentType,
+                        src: file.src,
+                        alt: file.alt
+                    };
+                } else if (brickFile.type === 'list.file_reference') {
+                    doc[key] = value.map((file: TFile) => ({
+                        width: file.width,
+                        height: file.height,
+                        contentType: file.contentType,
+                        src: file.src,
+                        alt: file.alt
+                    }));
+                } else {
+                    doc[key] = value;
+                }
+            }
+
+            return doc;
+        });
 
         res.json(output);
     } catch (e) {
