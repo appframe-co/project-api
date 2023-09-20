@@ -16,6 +16,8 @@ export type TProject = {
   name: string;
   createdAt: Date;
   updatedAt: Date;
+  planFinishedAt: Date;
+  trialFinishedAt: Date;
 }
 
 export type TDoc = {[key: string]: any}
