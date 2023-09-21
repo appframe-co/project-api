@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "build": "npx tsc",
-    "start": "node build/app.js",
+    "start": "node -r ts-node/register/transpile-only -r tsconfig-paths/register build/app.js",
     "serve": "nodemon src/app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
