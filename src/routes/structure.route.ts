@@ -37,19 +37,16 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
         });
         const {entries}: {entries: TEntry[]} = await resFetch.json();
 
-        const types = ['file_reference', 'list.file_reference'];
-        const bricksOfFilesRef = structure.bricks.filter(b => types.includes(b.type)).map(b => ({key: b.key, type: b.type}));
+        const bricks = structure.bricks.reduce((acc: {[key:string]:{type:string}}, b) => {
+            acc[b.key] = {type: b.type};
+            return acc;
+        }, {});
 
         const output = entries.map(entry => {
             const doc: TDoc = {id: entry.id};
 
             for (const [key, value] of Object.entries(entry.doc)) {
-                const brickFile = bricksOfFilesRef.find(b => b.key === key);
-                if (!brickFile) {
-                    break;
-                }
-
-                if (brickFile.type === 'file_reference') {
+                if (bricks[key].type === 'file_reference') {
                     const file: TFile = value;
                     doc[key] = {
                         width: file.width,
@@ -58,7 +55,8 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
                         src: file.src,
                         alt: file.alt
                     };
-                } else if (brickFile.type === 'list.file_reference') {
+                } 
+                else if (bricks[key].type === 'list.file_reference') {
                     doc[key] = value.map((file: TFile) => ({
                         width: file.width,
                         height: file.height,
@@ -66,7 +64,8 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
                         src: file.src,
                         alt: file.alt
                     }));
-                } else {
+                } 
+                else {
                     doc[key] = value;
                 }
             }
