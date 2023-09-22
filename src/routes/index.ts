@@ -48,5 +48,5 @@ export default ({ app }: RoutesInput) => {
         }
     });
 
-    app.use('/api/structures', structure);
+    app.use('/structures', structure);
 };
