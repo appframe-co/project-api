@@ -46,7 +46,7 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
             const doc: TDoc = {id: entry.id};
 
             for (const [key, value] of Object.entries(entry.doc)) {
-                if (bricks[key].type === 'file_reference') {
+                if (bricks[key].type === 'file_reference' && value) {
                     const file: TFile = value;
                     doc[key] = {
                         width: file.width,
@@ -56,7 +56,7 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
                         alt: file.alt
                     };
                 } 
-                else if (bricks[key].type === 'list.file_reference') {
+                else if (bricks[key].type === 'list.file_reference' && value) {
                     doc[key] = value.map((file: TFile) => ({
                         width: file.width,
                         height: file.height,
@@ -64,7 +64,7 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
                         src: file.src,
                         alt: file.alt
                     }));
-                } 
+                }
                 else {
                     doc[key] = value;
                 }
