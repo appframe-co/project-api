@@ -17,7 +17,7 @@ router.get('/:code', async function (req: Request, res: Response, next: NextFunc
     try {
         const {userId, projectId} = res.locals as {userId: string, projectId: string};
         const {code} = req.params as {code: string};
-        const {sinceId, limit=50, skip=0} = req.query as {sinceId: string, limit: string, skip: string};
+        const {sinceId, limit=50, page=1} = req.query as {sinceId: string, limit: string, page: string};
 
         let data: TDoc[], structureId: string;
         {
@@ -29,12 +29,16 @@ router.get('/:code', async function (req: Request, res: Response, next: NextFunc
             });
             const dataFetchStructures: TErrorResponse|{structures: TStructure[]} = await resFetchStructures.json();
             if (isErrorStructures(dataFetchStructures)) {
-                throw new Error('Error structure');
+                throw new Error('Structure Invalid');
             }
+            if (!dataFetchStructures.structures.length) {
+                throw new Error('Structure not exist');
+            }
+
             const structure = dataFetchStructures.structures[0];
             structureId = structure.id;
-    
-            let queryString = `${process.env.URL_ENTRY_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&structureId=${structure.id}&limit=${limit}&skip=${skip}`;
+
+            let queryString = `${process.env.URL_ENTRY_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&structureId=${structure.id}&limit=${limit}&page=${page}`;
             if (sinceId) {
                 queryString += `&sinceId=${sinceId}`;
             }
@@ -105,7 +109,12 @@ router.get('/:code', async function (req: Request, res: Response, next: NextFunc
 
         res.json({count, data});
     } catch (e) {
-        res.json({error: 'error'});
+        let message = 'error';
+        if (e instanceof Error) {
+            message = e.message;
+        }
+
+        res.json({error: message});
     }
 });
 
