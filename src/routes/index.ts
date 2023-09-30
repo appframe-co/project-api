@@ -21,11 +21,11 @@ export default ({ app }: RoutesInput) => {
 
     app.use((req, res, next) => {
         const arUrl = req.originalUrl.split('/');
-        const versionFromUrl = arUrl[4];
-    
+        const versionFromUrl = arUrl[1];
+
         const indexVersion = versions.indexOf(versionFromUrl);
         const version = (indexVersion === -1) ? versions[0]: versions[indexVersion];
-    
+
         res.header('X-Powered-By', 'AppFrame');
         res.header('X-AppFrame-API-Version', version);
 
