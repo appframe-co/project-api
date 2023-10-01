@@ -34,12 +34,12 @@ export default ({ app }: RoutesInput) => {
 
     app.use(async function (req: Request, res: Response, next: NextFunction): Promise<void| Response> {
         try {
-            const apiKey = req.headers['x-api-key'] as string;
-            if (!apiKey) {
-                return res.status(401).json({message: 'Invalid API key'});
+            const token = req.headers['x-appframe-project-access-token'] as string;
+            if (!token) {
+                return res.status(401).json({message: 'Invalid access token'});
             }
 
-            const resFetch = await fetch(`${process.env.URL_PROJECT_SERVICE}/api/projects?token=${apiKey}`, {
+            const resFetch = await fetch(`${process.env.URL_PROJECT_SERVICE}/api/projects?token=${token}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'

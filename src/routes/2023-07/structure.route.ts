@@ -13,7 +13,7 @@ function isErrorEntriesCount(data: TErrorResponse | {count: number}): data is TE
     return !!(data as TErrorResponse).error; 
 }
 
-router.get('/:code', async function (req: Request, res: Response, next: NextFunction) {
+router.get('/:code.json', async function (req: Request, res: Response, next: NextFunction) {
     try {
         const {userId, projectId} = res.locals as {userId: string, projectId: string};
         const {code} = req.params as {code: string};
