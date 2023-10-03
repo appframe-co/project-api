@@ -26,8 +26,8 @@ export type TEntry = {
   id: string;
   projectId: string;
   structureId: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: Date;
+  updatedAt: Date;
   createdBy: string;
   updatedBy: string;
   doc: TDoc;
@@ -59,4 +59,15 @@ export type TFile = {
   contentType: string;
   src: string;
   alt: string;
+}
+
+export type TEntryOutput = {
+  id: string;
+  created_at: Date;
+  updated_at: Date;
+  doc: TDoc;
+}
+
+export type TEntryInput = {
+  doc: TDoc;
 }

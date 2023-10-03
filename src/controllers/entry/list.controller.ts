@@ -1,4 +1,4 @@
-import { TDoc, TEntry, TErrorResponse, TFile, TStructure } from "@/types/types";
+import { TDoc, TEntry, TErrorResponse, TFile, TStructure, TEntryOutput } from "@/types/types";
 
 function isErrorStructures(data: TErrorResponse | {structures: TStructure[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
@@ -16,7 +16,7 @@ type TPayload = {
     ids: string;
 }
 
-export async function List({userId, projectId, code}: {userId:string, projectId:string, code:string}, payload: TPayload): Promise<TDoc[]> {
+export async function List({userId, projectId, code}: {userId:string, projectId:string, code:string}, payload: TPayload): Promise<TEntryOutput[]> {
     const {limit, page, sinceId, fields, ids} = payload;
 
     const arFields = fields ? fields.split(',') : [];
