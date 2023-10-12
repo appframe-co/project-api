@@ -38,6 +38,14 @@ export type TStructure = {
   name: string;
   code: string;
   bricks: TBrick[];
+  notifications: {
+    new: {
+      alert: {
+        enabled: boolean;
+        message: string
+      }
+    }
+  };
 }
 
 type TBrick = {
@@ -70,4 +78,15 @@ export type TEntryOutput = {
 
 export type TEntryInput = {
   doc: TDoc;
+}
+
+export type TAlert = {
+  id: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  subjectId: string;
+  subjectType: string;
+  projectId: string;
+  structureId: string;
 }
