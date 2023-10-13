@@ -24,7 +24,7 @@ export async function CreateEntry({userId, projectId, code}: {userId:string, pro
             throw new Error('doc invalid');
         }
 
-        let structureId: string, newAlert: {enabled: boolean, message: string};
+        let structureId: string, newAlert: {enabled: boolean, message: string}|undefined;
             {
                 const resFetchStructures = await fetch(`${process.env.URL_STRUCTURE_SERVICE}/api/structures?userId=${userId}&projectId=${projectId}&code=${code}`, {
                     method: 'GET',
@@ -42,7 +42,7 @@ export async function CreateEntry({userId, projectId, code}: {userId:string, pro
     
                 const structure = dataFetchStructures.structures[0];
                 structureId = structure.id;
-                newAlert = structure.notifications.new.alert;
+                newAlert = structure.notifications?.new.alert;
             }
 
         const resFetch = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/entries`, {
@@ -54,7 +54,7 @@ export async function CreateEntry({userId, projectId, code}: {userId:string, pro
         });
         const data: {entry: TEntry|null, userErrors: any} = await resFetch.json();
         if (data.entry) {
-            if (newAlert.enabled) {
+            if (newAlert && newAlert.enabled) {
                 const resFetch = await fetch(`${process.env.URL_NOTIFICATION_SERVICE}/api/alerts`, {
                     method: 'POST',
                     headers: {
