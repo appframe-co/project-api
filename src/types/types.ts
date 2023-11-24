@@ -18,6 +18,8 @@ export type TProject = {
   updatedAt: Date;
   planFinishedAt: Date;
   trialFinishedAt: Date;
+  currencies: {code:string, primary:boolean}[];
+  languages: {code:string, primary:boolean}[];
 }
 
 export type TDoc = {[key: string]: any}
@@ -46,6 +48,9 @@ export type TStructure = {
       }
     }
   };
+  translations: {
+    enabled: boolean;
+  }
 }
 
 type TBrick = {
@@ -62,6 +67,7 @@ type TValidationBrick = {
 }
 
 export type TFile = {
+  id: string;
   width: number;
   height: number;
   contentType: string;
@@ -89,4 +95,19 @@ export type TAlert = {
   subjectType: string;
   projectId: string;
   structureId: string;
+}
+
+export type TValueTranslation = {[key: string]: any}
+
+export type TTranslation = {
+  id: string;
+	userId: string; 
+  projectId: string;
+  structureId: string;
+  subjectId: string;
+  subject: string;
+  key: string;
+  value: TValueTranslation;
+  lang: string;
+  createdAt?: string;
 }

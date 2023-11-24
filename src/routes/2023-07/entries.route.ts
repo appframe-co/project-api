@@ -40,10 +40,11 @@ router.get('/:code.json', async function (req: Request, res: Response, next: Nex
         const {code} = req.params as {code: string};
         const {sinceId, limit=50, page=1, fields, ids} = req.query as TQueryList;
 
-        const entries: TEntryOutput[] = await List({userId, projectId, code}, {sinceId, limit, page, fields, ids})
+        const entries: TEntryOutput[] = await List({userId, projectId, code}, {sinceId, limit, page, fields, ids, languages: res.locals.languages})
 
         res.json({entries});
     } catch (e) {
+        console.log(e)
         let message = 'error';
         if (e instanceof Error) {
             message = e.message;

@@ -66,6 +66,7 @@ export default ({ app }: RoutesInput) => {
 
             res.locals.userId = userId;
             res.locals.projectId = id;
+            res.locals.languages = data.projects[0].languages;
 
             next();
         } catch(err) {
