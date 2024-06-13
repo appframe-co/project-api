@@ -76,6 +76,9 @@ export default ({ app }: RoutesInput) => {
 
     for (const version of versions) {
         const entries = require('./'+version+'/entries.route');
-        app.use(`/${version}/entries`, entries.default);        
+        const menus = require('./'+version+'/menus.route');
+
+        app.use(`/${version}/entries`, entries.default);
+        app.use(`/${version}/menus`, menus.default);  
     }
 };

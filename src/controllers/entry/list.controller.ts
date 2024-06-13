@@ -144,11 +144,34 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
     try {
         const translations: any = {};
 
-        if (enabled) {
-            languages.forEach(lang => translations['doc_' + lang.code] = produce(doc, (draft: any) => draft));
+        if (!enabled) {
+            return translations;
+        }
 
-            // Entry
-            const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subjectId=${entryId}&subject=entry`, {
+        languages.forEach(lang => translations['doc_' + lang.code] = produce(doc, (draft: any) => draft));
+
+        // Entry
+        const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subjectId=${entryId}&subject=entry`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
+        if (!isErrorTranslations(dataFetchTranslations)) {
+            dataFetchTranslations.translations.forEach(t => {
+                if (translations.hasOwnProperty('doc_' + t.lang)) {
+                    translations['doc_' + t.lang] = {
+                        ...translations['doc_' + t.lang],
+                        ...t.value
+                    };
+                }
+            });
+        }
+
+        // File (ref brick)
+        for (let key of fileKeys) {
+            const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subject=file&key=${key}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -158,59 +181,38 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
             if (!isErrorTranslations(dataFetchTranslations)) {
                 dataFetchTranslations.translations.forEach(t => {
                     if (translations.hasOwnProperty('doc_' + t.lang)) {
-                        translations['doc_' + t.lang] = {
-                            ...translations['doc_' + t.lang],
-                            ...t.value
-                        };
-                    }
-                });
-            }
-
-            // File (ref brick)
-            for (let key of fileKeys) {
-                const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subject=file&key=${key}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
-                if (!isErrorTranslations(dataFetchTranslations)) {
-                    dataFetchTranslations.translations.forEach(t => {
-                        if (translations.hasOwnProperty('doc_' + t.lang)) {
-                            if (!Array.isArray(translations['doc_' + t.lang][key])) {
-                                translations['doc_' + t.lang] = {
-                                    ...translations['doc_' + t.lang],
-                                    [key]: {
-                                        ...translations['doc_' + t.lang][key],
-                                        ...t.value
-                                    }
-                                }
-                            } else {
-                                const index: number = entry.doc[key].findIndex((v: TFile) => v.id === t.subjectId);
-                                if (index !== -1) {
-                                    const arr = translations['doc_' + t.lang][key].map((f:any, i: number)=> {
-                                        if (i === index) {
-                                            return {
-                                                ...f, 
-                                                ...t.value
-                                            }
-                                        }
-                                        return {
-                                            ...f
-                                        }
-                                    })
-
-                                    translations['doc_' + t.lang] = {
-                                        ...translations['doc_' + t.lang],
-                                        [key]: arr
-                                    };
+                        if (!Array.isArray(translations['doc_' + t.lang][key])) {
+                            translations['doc_' + t.lang] = {
+                                ...translations['doc_' + t.lang],
+                                [key]: {
+                                    ...translations['doc_' + t.lang][key],
+                                    ...t.value
                                 }
                             }
+                        } else {
+                            const index: number = entry.doc[key].findIndex((v: TFile) => v.id === t.subjectId);
+                            if (index !== -1) {
+                                const arr = translations['doc_' + t.lang][key].map((f:any, i: number)=> {
+                                    if (i === index) {
+                                        return {
+                                            ...f, 
+                                            ...t.value
+                                        }
+                                    }
+                                    return {
+                                        ...f
+                                    }
+                                })
 
-                       }
-                    });
-                }
+                                translations['doc_' + t.lang] = {
+                                    ...translations['doc_' + t.lang],
+                                    [key]: arr
+                                };
+                            }
+                        }
+
+                   }
+                });
             }
         }
 

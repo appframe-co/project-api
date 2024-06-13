@@ -111,3 +111,47 @@ export type TTranslation = {
   lang: string;
   createdAt?: string;
 }
+
+
+export type TItemOutput = {
+  title: string;
+  url: string;
+  type: string;
+  items: TItemOutput[];
+}
+export type TMenuOutput = {
+  id: string;
+  handle: string;
+  items: TItemOutput[];
+}
+
+export type TItem = {
+  title: string;
+  url: string;
+  subject: string;
+  subjectId: string;
+  type: string;
+  items: TItem[];
+}
+export type TMenu = {
+  id: string;
+  projectId: string;
+  title: string;
+  handle: string;
+  items: TItem[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type TSection = {
+  id: string;
+  projectId: string;
+  structureId: string;
+  parentId: string|null;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy: string;
+  updatedBy: string;
+  doc: TDoc;
+  sections?: TSection[];
+}

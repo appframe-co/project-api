@@ -44,7 +44,6 @@ router.get('/:code.json', async function (req: Request, res: Response, next: Nex
 
         res.json({entries});
     } catch (e) {
-        console.log(e)
         let message = 'error';
         if (e instanceof Error) {
             message = e.message;
