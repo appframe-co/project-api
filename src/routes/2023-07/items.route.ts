@@ -1,4 +1,4 @@
-import { TMenuOutput } from '@/types/types';
+import { TItemOutput, TMenuOutput } from '@/types/types';
 import express, { Request, Response, NextFunction } from 'express';
 
 import { List } from '@/controllers/menu/list.controller';
@@ -14,9 +14,9 @@ router.get('/:code.json', async function (req: Request, res: Response, next: Nex
 
         depthLevel = +depthLevel;
 
-        const menus: TMenuOutput[] = await List({userId, projectId, code}, {limit, page, languages: res.locals.languages, depthLevel})
+        const items: TItemOutput[] = await List({userId, projectId, code}, {limit, page, languages: res.locals.languages, depthLevel})
 
-        res.json({menus});
+        res.json({items});
     } catch (e) {
         let message = 'error';
         if (e instanceof Error) {

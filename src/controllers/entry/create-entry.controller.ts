@@ -1,4 +1,4 @@
-import { TAlert, TEntry, TEntryInput, TEntryOutput, TErrorResponse, TStructure } from '@/types/types';
+import { TAlert, TEntry, TEntryInput, TEntryOutput, TErrorResponse, TContent } from '@/types/types';
 
 type TPayload = {
     entry: TEntryInput;
@@ -7,7 +7,7 @@ type TPayload = {
 function isErrorAlert(data: TErrorResponse | {alert: TAlert}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
-function isErrorStructures(data: TErrorResponse | {structures: TStructure[]}): data is TErrorResponse {
+function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
 
@@ -24,33 +24,33 @@ export async function CreateEntry({userId, projectId, code}: {userId:string, pro
             throw new Error('doc invalid');
         }
 
-        let structureId: string, newAlert: {enabled: boolean, message: string}|undefined;
+        let contentId: string, newAlert: {enabled: boolean, message: string}|undefined;
             {
-                const resFetchStructures = await fetch(`${process.env.URL_STRUCTURE_SERVICE}/api/structures?userId=${userId}&projectId=${projectId}&code=${code}`, {
+                const resFetchContents = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/contents?userId=${userId}&projectId=${projectId}&code=${code}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
-                const dataFetchStructures: TErrorResponse|{structures: TStructure[]} = await resFetchStructures.json();
-                if (isErrorStructures(dataFetchStructures)) {
-                    throw new Error('Structure Invalid');
+                const dataFetchContents: TErrorResponse|{contents: TContent[]} = await resFetchContents.json();
+                if (isErrorContents(dataFetchContents)) {
+                    throw new Error('Content Invalid');
                 }
-                if (!dataFetchStructures.structures.length) {
-                    throw new Error('Structure not exist');
+                if (!dataFetchContents.contents.length) {
+                    throw new Error('Content not exist');
                 }
     
-                const structure = dataFetchStructures.structures[0];
-                structureId = structure.id;
-                newAlert = structure.notifications?.new.alert;
+                const content = dataFetchContents.contents[0];
+                contentId = content.id;
+                newAlert = content.notifications?.new.alert;
             }
 
-        const resFetch = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/entries`, {
+        const resFetch = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/entries`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             }, 
-            body: JSON.stringify({userId, projectId, structureId, doc})
+            body: JSON.stringify({userId, projectId, contentId, doc})
         });
         const data: {entry: TEntry|null, userErrors: any} = await resFetch.json();
         if (data.entry) {
@@ -60,7 +60,7 @@ export async function CreateEntry({userId, projectId, code}: {userId:string, pro
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({userId, projectId, structureId, subjectId: data.entry.id, subjectType: 'entries', message: newAlert.message})
+                    body: JSON.stringify({userId, projectId, contentId, subjectId: data.entry.id, subjectType: 'entries', message: newAlert.message})
                 });
                 const dataJson: TErrorResponse|{alert:TAlert} = await resFetch.json();
                 if (!isErrorAlert(dataJson)) {

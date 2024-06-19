@@ -1,6 +1,6 @@
-import { TErrorResponse, TStructure } from '@/types/types';
+import { TErrorResponse, TContent } from '@/types/types';
 
-function isErrorStructures(data: TErrorResponse | {structures: TStructure[]}): data is TErrorResponse {
+function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
 function isErrorEntriesCount(data: TErrorResponse | {count: number}): data is TErrorResponse {
@@ -8,29 +8,29 @@ function isErrorEntriesCount(data: TErrorResponse | {count: number}): data is TE
 }
 
 export async function Count({userId, projectId, code}: {userId:string, projectId:string, code:string}) {
-    let structureId: string;
+    let contentId: string;
         {
-            const resFetchStructures = await fetch(`${process.env.URL_STRUCTURE_SERVICE}/api/structures?userId=${userId}&projectId=${projectId}&code=${code}`, {
+            const resFetchContents = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/contents?userId=${userId}&projectId=${projectId}&code=${code}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            const dataFetchStructures: TErrorResponse|{structures: TStructure[]} = await resFetchStructures.json();
-            if (isErrorStructures(dataFetchStructures)) {
-                throw new Error('Structure Invalid');
+            const dataFetchContents: TErrorResponse|{contents: TContent[]} = await resFetchContents.json();
+            if (isErrorContents(dataFetchContents)) {
+                throw new Error('Content Invalid');
             }
-            if (!dataFetchStructures.structures.length) {
-                throw new Error('Structure not exist');
+            if (!dataFetchContents.contents.length) {
+                throw new Error('Content not exist');
             }
 
-            const structure = dataFetchStructures.structures[0];
-            structureId = structure.id;
+            const content = dataFetchContents.contents[0];
+            contentId = content.id;
         }
 
         let count: number;
         {
-            const resFetchCount = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/entries/count?userId=${userId}&projectId=${projectId}&structureId=${structureId}`, {
+            const resFetchCount = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/entries/count?userId=${userId}&projectId=${projectId}&contentId=${contentId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'

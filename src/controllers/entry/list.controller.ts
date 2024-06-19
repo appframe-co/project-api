@@ -1,8 +1,8 @@
 import { produce } from "immer";
 
-import { TDoc, TEntry, TErrorResponse, TFile, TStructure, TEntryOutput, TTranslation } from "@/types/types";
+import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation } from "@/types/types";
 
-function isErrorStructures(data: TErrorResponse | {structures: TStructure[]}): data is TErrorResponse {
+function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
 
@@ -28,23 +28,28 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
 
     const arFields = fields ? fields.split(',') : [];
 
-    const resFetchStructures = await fetch(`${process.env.URL_STRUCTURE_SERVICE}/api/structures?userId=${userId}&projectId=${projectId}&code=${code}`, {
+    const resFetchContents = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/contents?userId=${userId}&projectId=${projectId}&code=${code}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
     });
-    const dataFetchStructures: TErrorResponse|{structures: TStructure[]} = await resFetchStructures.json();
-    if (isErrorStructures(dataFetchStructures)) {
-        throw new Error('Structure Invalid');
+    const dataFetchContents: TErrorResponse|{contents: TContent[]} = await resFetchContents.json();
+    if (isErrorContents(dataFetchContents)) {
+        throw new Error('Content Invalid');
     }
-    if (!dataFetchStructures.structures.length) {
-        throw new Error('Structure not exist');
+    if (!dataFetchContents.contents.length) {
+        throw new Error('Content not exist');
     }
 
-    const structure = dataFetchStructures.structures[0];
+    const content = dataFetchContents.contents[0];
     
-    let queryString = `${process.env.URL_ENTRY_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&structureId=${structure.id}&limit=${limit}&page=${page}`;
+    const fieldsContent = content.entries.fields.reduce((acc: {[key:string]:{type:string}}, b) => {
+        acc[b.key] = {type: b.type};
+        return acc;
+    }, {});
+
+    let queryString = `${process.env.URL_CONTENT_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&contentId=${content.id}&limit=${limit}&page=${page}`;
     if (sinceId) {
         queryString += `&sinceId=${sinceId}`;
     }
@@ -62,12 +67,6 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
         throw new Error('Error entries');
     }
 
-    const bricks = structure.bricks.reduce((acc: {[key:string]:{type:string}}, b) => {
-        acc[b.key] = {type: b.type};
-        return acc;
-    }, {});
-
-
     const output = [];
     for (let entry of dataFetchEntries.entries) {
         const doc: TDoc = {};
@@ -78,7 +77,7 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                 continue;
             }
 
-            if (bricks[key].type === 'file_reference' && value) {
+            if (fieldsContent[key].type === 'file_reference' && value) {
                 const file: TFile = value;
                 doc[key] = {
                     width: file.width,
@@ -90,7 +89,7 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
 
                 fileKeys.push(key);
             }
-            else if (bricks[key].type === 'list.file_reference' && value) {
+            else if (fieldsContent[key].type === 'list.file_reference' && value) {
                 doc[key] = value.map((file: TFile) => {
                     return {
                         width: file.width,
@@ -108,10 +107,9 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
             }
         }
 
-
         const translations = await getTranslations(
-            {enabled: structure.translations.enabled, languages, fileKeys, doc, entry},
-            {userId, projectId, structureId: structure.id, entryId: entry.id}
+            {enabled: content.translations?.enabled, languages, fileKeys, doc, entry},
+            {userId, projectId, contentId: content.id, entryId: entry.id}
         );
 
         output.push({
@@ -137,10 +135,10 @@ type TPropsTranslation = {
 type TPropsPayloadTranslation = {
     userId: string;
     projectId: string; 
-    structureId: string; 
+    contentId: string; 
     entryId: string; 
 }
-async function getTranslations({enabled, languages, fileKeys, doc, entry}: TPropsTranslation, {userId, projectId, structureId, entryId}: TPropsPayloadTranslation) {
+async function getTranslations({enabled, languages, fileKeys, doc, entry}: TPropsTranslation, {userId, projectId, contentId, entryId}: TPropsPayloadTranslation) {
     try {
         const translations: any = {};
 
@@ -148,10 +146,7 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
             return translations;
         }
 
-        languages.forEach(lang => translations['doc_' + lang.code] = produce(doc, (draft: any) => draft));
-
-        // Entry
-        const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subjectId=${entryId}&subject=entry`, {
+        const resFetchTranslations = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&contentId=${contentId}&subjectId=${entryId}&subject=entry`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -160,18 +155,16 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
         const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
         if (!isErrorTranslations(dataFetchTranslations)) {
             dataFetchTranslations.translations.forEach(t => {
-                if (translations.hasOwnProperty('doc_' + t.lang)) {
-                    translations['doc_' + t.lang] = {
-                        ...translations['doc_' + t.lang],
-                        ...t.value
-                    };
-                }
+                translations['doc_' + t.lang] = {
+                    ...translations['doc_' + t.lang],
+                    ...t.value
+                };
             });
         }
 
-        // File (ref brick)
+        // File (ref field)
         for (let key of fileKeys) {
-            const resFetchTranslations = await fetch(`${process.env.URL_ENTRY_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&structureId=${structureId}&subject=file&key=${key}`, {
+            const resFetchTranslations = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&contentId=${contentId}&subject=file&key=${key}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -180,38 +173,35 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
             const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
             if (!isErrorTranslations(dataFetchTranslations)) {
                 dataFetchTranslations.translations.forEach(t => {
-                    if (translations.hasOwnProperty('doc_' + t.lang)) {
-                        if (!Array.isArray(translations['doc_' + t.lang][key])) {
-                            translations['doc_' + t.lang] = {
-                                ...translations['doc_' + t.lang],
-                                [key]: {
-                                    ...translations['doc_' + t.lang][key],
-                                    ...t.value
-                                }
-                            }
-                        } else {
-                            const index: number = entry.doc[key].findIndex((v: TFile) => v.id === t.subjectId);
-                            if (index !== -1) {
-                                const arr = translations['doc_' + t.lang][key].map((f:any, i: number)=> {
-                                    if (i === index) {
-                                        return {
-                                            ...f, 
-                                            ...t.value
-                                        }
-                                    }
-                                    return {
-                                        ...f
-                                    }
-                                })
-
-                                translations['doc_' + t.lang] = {
-                                    ...translations['doc_' + t.lang],
-                                    [key]: arr
-                                };
+                    if (translations['doc_' + t.lang] && !Array.isArray(translations['doc_' + t.lang][key])) {
+                        translations['doc_' + t.lang] = {
+                            ...translations['doc_' + t.lang],
+                            [key]: {
+                                ...translations['doc_' + t.lang][key],
+                                ...t.value
                             }
                         }
+                    } else {
+                        const index: number = entry.doc[key].findIndex((v: TFile) => v.id === t.subjectId);
+                        if (index !== -1) {
+                            const arr = translations['doc_' + t.lang][key].map((f:any, i: number)=> {
+                                if (i === index) {
+                                    return {
+                                        ...f, 
+                                        ...t.value
+                                    }
+                                }
+                                return {
+                                    ...f
+                                }
+                            })
 
-                   }
+                            translations['doc_' + t.lang] = {
+                                ...translations['doc_' + t.lang],
+                                [key]: arr
+                            };
+                        }
+                    }
                 });
             }
         }

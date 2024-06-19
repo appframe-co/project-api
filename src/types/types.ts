@@ -27,7 +27,7 @@ export type TDoc = {[key: string]: any}
 export type TEntry = {
   id: string;
   projectId: string;
-  structureId: string;
+  contentId: string;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -35,11 +35,17 @@ export type TEntry = {
   doc: TDoc;
 }
 
-export type TStructure = {
+export type TContent = {
   id: string;
   name: string;
   code: string;
-  bricks: TBrick[];
+  entries: {
+    fields: TField[];
+  };
+  sections: {
+    enabled: boolean;
+    fields: TField[];
+  };
   notifications: {
     new: {
       alert: {
@@ -53,15 +59,15 @@ export type TStructure = {
   }
 }
 
-type TBrick = {
+type TField = {
   type: string;
   name: string;
   key: string;
   description: string;
-  validations: TValidationBrick[];
+  validations: TValidationField[];
 }
 
-type TValidationBrick = {
+type TValidationField = {
   code: string;
   value: any;
 }
@@ -94,7 +100,7 @@ export type TAlert = {
   subjectId: string;
   subjectType: string;
   projectId: string;
-  structureId: string;
+  contentId: string;
 }
 
 export type TValueTranslation = {[key: string]: any}
@@ -103,7 +109,7 @@ export type TTranslation = {
   id: string;
 	userId: string; 
   projectId: string;
-  structureId: string;
+  contentId: string;
   subjectId: string;
   subject: string;
   key: string;
@@ -114,39 +120,50 @@ export type TTranslation = {
 
 
 export type TItemOutput = {
-  title: string;
-  url: string;
-  type: string;
-  items: TItemOutput[];
+  id: string;
+  created_at: Date;
+  updated_at: Date;
+  doc: TDoc;
+  items?: TItemOutput[];
 }
 export type TMenuOutput = {
   id: string;
-  handle: string;
-  items: TItemOutput[];
+  created_at: Date;
+  updated_at: Date;
+  doc: TDoc;
 }
 
 export type TItem = {
-  title: string;
-  url: string;
-  subject: string;
-  subjectId: string;
-  type: string;
-  items: TItem[];
-}
-export type TMenu = {
   id: string;
   projectId: string;
-  title: string;
-  handle: string;
-  items: TItem[];
-  createdAt?: string;
-  updatedAt?: string;
+  menuId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  updatedBy: string;
+  doc: TDoc;
+  parentId: string;
+  subjectId: string|null;
+  subject: string|null;
+  items?: TItem[];
+}
+
+export type TMenu = {
+  id: string;
+  name: string;
+  code: string;
+  items: {
+    fields: TField[];
+  };
+  translations: {
+    enabled: boolean;
+  }
 }
 
 export type TSection = {
   id: string;
   projectId: string;
-  structureId: string;
+  contentId: string;
   parentId: string|null;
   createdAt?: string;
   updatedAt?: string;

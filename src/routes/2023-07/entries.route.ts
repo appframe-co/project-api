@@ -1,4 +1,4 @@
-import { TDoc, TEntry, TEntryInput, TEntryOutput } from '@/types/types';
+import { TEntryInput, TEntryOutput } from '@/types/types';
 import express, { Request, Response, NextFunction } from 'express';
 
 import { List } from '@/controllers/entry/list.controller';
