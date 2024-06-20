@@ -1,5 +1,3 @@
-import { produce } from "immer";
-
 import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation } from "@/types/types";
 
 function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {

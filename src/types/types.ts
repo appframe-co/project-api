@@ -20,6 +20,21 @@ export type TProject = {
   trialFinishedAt: Date;
   currencies: {code:string, primary:boolean}[];
   languages: {code:string, primary:boolean}[];
+  front: {
+    title: string;
+    logo: string;
+  };
+}
+
+export type TProjectOutput = {
+  id: string;
+  name: string;
+  currencies: {code:string, primary:boolean}[];
+  languages: {code:string, primary:boolean}[];
+  front: {
+    title: string;
+    logo: TFile;
+  };
 }
 
 export type TDoc = {[key: string]: any}
