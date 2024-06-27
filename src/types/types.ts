@@ -133,7 +133,6 @@ export type TTranslation = {
   createdAt?: string;
 }
 
-
 export type TItemOutput = {
   id: string;
   created_at: Date;
@@ -186,4 +185,11 @@ export type TSection = {
   updatedBy: string;
   doc: TDoc;
   sections?: TSection[];
+}
+
+export type TSectionOutput = {
+  id: string;
+  parentId: string|null;
+  doc: TDoc;
+  sections?: TSectionOutput[];
 }

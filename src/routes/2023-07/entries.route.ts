@@ -13,6 +13,7 @@ type TQueryList = {
     page: string;
     fields: string;
     ids: string;
+    section_code: string;
 }
 
 router.post('/:code.json', async function (req: Request, res: Response, next: NextFunction) {
@@ -38,9 +39,12 @@ router.get('/:code.json', async function (req: Request, res: Response, next: Nex
     try {
         const {userId, projectId} = res.locals as {userId: string, projectId: string};
         const {code} = req.params as {code: string};
-        const {sinceId, limit=50, page=1, fields, ids} = req.query as TQueryList;
+        const {sinceId, limit=50, page=1, fields, ids, section_code:sectionCode, ...doc} = req.query as TQueryList;
 
-        const entries: TEntryOutput[] = await List({userId, projectId, code}, {sinceId, limit, page, fields, ids, languages: res.locals.languages})
+        const entries: TEntryOutput[] = await List(
+            {userId, projectId, code}, 
+            {sinceId, limit, page, fields, ids, sectionCode, doc}
+        );
 
         res.json({entries});
     } catch (e) {

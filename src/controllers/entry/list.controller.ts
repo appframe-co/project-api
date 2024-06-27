@@ -1,14 +1,16 @@
-import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation } from "@/types/types";
+import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation, TSection } from "@/types/types";
+import { convertHTMLToObj } from "@/utils/convert-html-to-obj";
 
 function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
-
 function isErrorEntries(data: TErrorResponse | {entries: TEntry[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
-
 function isErrorTranslations(data: TErrorResponse | {translations: TTranslation[]}): data is TErrorResponse {
+    return !!(data as TErrorResponse).error; 
+}
+function isErrorSections(data: TErrorResponse | {sections: TSection[]}): data is TErrorResponse {
     return !!(data as TErrorResponse).error; 
 }
 
@@ -18,11 +20,12 @@ type TPayload = {
     sinceId: string;
     fields: string;
     ids: string;
-    languages: {code:string, primary:boolean}[];
+    sectionCode: string|null;
+    doc: {[key:string]: string};
 }
 
 export async function List({userId, projectId, code}: {userId:string, projectId:string, code:string}, payload: TPayload): Promise<TEntryOutput[]> {
-    const {limit, page, sinceId, fields, ids, languages} = payload;
+    const {limit, page, sinceId, fields, ids, sectionCode, doc} = payload;
 
     const arFields = fields ? fields.split(',') : [];
 
@@ -47,13 +50,40 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
         return acc;
     }, {});
 
-    let queryString = `${process.env.URL_CONTENT_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&contentId=${content.id}&limit=${limit}&page=${page}`;
+    let sectionId;
+    if (sectionCode) {
+        const resFetchSections = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/sections?userId=${userId}&projectId=${projectId}&contentId=${content.id}&section_code=${sectionCode}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const dataFetchSections: TErrorResponse|{sections: TSection[], parent: TSection|null} = await resFetchSections.json();
+        if (isErrorSections(dataFetchSections)) {
+           return [];
+        }
+        if (!dataFetchSections.sections.length) {
+            return [];
+         }
+         
+        const section = dataFetchSections.sections[0];
+        if (section) {
+            sectionId = section.id;
+        }
+    }
+
+    let queryString = `${process.env.URL_CONTENT_SERVICE}/api/entries?userId=${userId}&projectId=${projectId}&contentId=${content.id}&limit=${limit}&page=${page}${sectionId ? '&section_id='+sectionId : ''}`;
     if (sinceId) {
         queryString += `&sinceId=${sinceId}`;
     }
     if (ids) {
         queryString += `&ids=${ids}`;
     }
+
+    for (let [key, value] of Object.entries(doc)) {
+        queryString += `&${key}=${value}`;
+    }
+
     const resFetchEntries = await fetch(queryString, {
         method: 'GET',
         headers: {
@@ -75,7 +105,13 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                 continue;
             }
 
-            if (fieldsContent[key].type === 'file_reference' && value) {
+            if (fieldsContent[key].type === 'rich_text' && value) {
+                doc[key] = {
+                    html: value,
+                    nodes: convertHTMLToObj(value)
+                };
+            }
+            else if (fieldsContent[key].type === 'file_reference' && value) {
                 const file: TFile = value;
                 doc[key] = {
                     width: file.width,
@@ -106,7 +142,7 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
         }
 
         const translations = await getTranslations(
-            {enabled: content.translations?.enabled, languages, fileKeys, doc, entry},
+            {enabled: content.translations?.enabled, fileKeys, entry, fieldsContent},
             {userId, projectId, contentId: content.id, entryId: entry.id}
         );
 
@@ -125,8 +161,7 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
 
 type TPropsTranslation = {
     enabled: boolean;
-    languages: {code:string, primary:boolean}[];
-    doc: any;
+    fieldsContent: any;
     entry: TEntry;
     fileKeys: string[];
 }
@@ -136,7 +171,7 @@ type TPropsPayloadTranslation = {
     contentId: string; 
     entryId: string; 
 }
-async function getTranslations({enabled, languages, fileKeys, doc, entry}: TPropsTranslation, {userId, projectId, contentId, entryId}: TPropsPayloadTranslation) {
+async function getTranslations({enabled, fileKeys, entry, fieldsContent}: TPropsTranslation, {userId, projectId, contentId, entryId}: TPropsPayloadTranslation) {
     try {
         const translations: any = {};
 
@@ -153,10 +188,17 @@ async function getTranslations({enabled, languages, fileKeys, doc, entry}: TProp
         const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
         if (!isErrorTranslations(dataFetchTranslations)) {
             dataFetchTranslations.translations.forEach(t => {
-                translations['doc_' + t.lang] = {
-                    ...translations['doc_' + t.lang],
-                    ...t.value
-                };
+                translations['doc_' + t.lang] = {};
+                for (const [key, value] of Object.entries(t.value)) {
+                    if (fieldsContent[key].type === 'rich_text' && value) {
+                        translations['doc_' + t.lang][key] = {
+                            html: value,
+                            nodes: convertHTMLToObj(value)
+                        };
+                    } else {
+                        translations['doc_' + t.lang][key] = value;
+                    }
+                }
             });
         }
 

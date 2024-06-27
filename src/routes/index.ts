@@ -76,10 +76,12 @@ export default ({ app }: RoutesInput) => {
 
     for (const version of versions) {
         const entries = require('./'+version+'/entries.route');
+        const sections = require('./'+version+'/sections.route');
         const items = require('./'+version+'/items.route');
         const project = require('./'+version+'/project.route');
 
         app.use(`/${version}/entries`, entries.default);
+        app.use(`/${version}/sections`, sections.default);
         app.use(`/${version}/items`, items.default);
         app.use(`/${version}/project`, project.default);
     }
