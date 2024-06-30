@@ -1,4 +1,5 @@
 import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation, TSection } from "@/types/types";
+import { convertHexToRgb } from "@/utils/convert-hex-to-rgb";
 import { convertHTMLToObj } from "@/utils/convert-html-to-obj";
 
 function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
@@ -135,6 +136,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                 });
 
                 fileKeys.push(key);
+            }
+            else if (fieldsContent[key].type === 'color' && value) {
+                doc[key] = {
+                    hex: value,
+                    rgb: convertHexToRgb(value)
+                };
+            }
+            else if (fieldsContent[key].type === 'list.color' && value) {
+                doc[key] = value.map((v: string) => ({
+                    hex: v,
+                    rgb: convertHexToRgb(v)
+                }));
             }
             else {
                 doc[key] = value;

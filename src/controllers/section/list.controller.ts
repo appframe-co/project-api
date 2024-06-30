@@ -1,4 +1,5 @@
 import { TErrorResponse, TItemOutput, TSection, TDoc, TFile, TTranslation, TContent, TSectionOutput } from "@/types/types";
+import { convertHexToRgb } from "@/utils/convert-hex-to-rgb";
 import { convertHTMLToObj } from "@/utils/convert-html-to-obj";
 
 function isErrorContents(data: TErrorResponse | {contents: TContent[]}): data is TErrorResponse {
@@ -88,10 +89,39 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
             }
 
             if (counterDepthLvl === 1 && dataFetchSections.parent) {
+                const doc: TDoc = {};
+                for (const [key, value] of Object.entries(dataFetchSections.parent.doc)) {
+                    if (fieldsContent[key] === undefined || fieldsContent[key] ===  null) {
+                        continue;
+                    }
+
+                    if (fieldsContent[key].type === 'rich_text' && value) {
+                        doc[key] = {
+                            html: value,
+                            nodes: convertHTMLToObj(value)
+                        };
+                    }
+                    else if (fieldsContent[key].type === 'color' && value) {
+                        doc[key] = {
+                            hex: value,
+                            rgb: convertHexToRgb(value)
+                        };
+                    }
+                    else if (fieldsContent[key].type === 'list.color' && value) {
+                        doc[key] = value.map((v: string) => ({
+                            hex: v,
+                            rgb: convertHexToRgb(v)
+                        }));
+                    }
+                    else {
+                        doc[key] = value;
+                    }
+                }
+
                 parent = {
                     id: dataFetchSections.parent.id,
                     parentId: dataFetchSections.parent.parentId,
-                    doc: dataFetchSections.parent.doc,
+                    doc
                 };
             }
             counterDepthLvl++;
@@ -101,6 +131,7 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
             for (let section of dataFetchSections.sections) {
                 const doc: TDoc = {};
                 const fileKeys: string[] = [];
+
                 for (const [key, value] of Object.entries(section.doc)) {
                     if (fieldsContent[key] === undefined || fieldsContent[key] ===  null) {
                         continue;
@@ -136,6 +167,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                         });
         
                         fileKeys.push(key);
+                    }
+                    else if (fieldsContent[key].type === 'color' && value) {
+                        doc[key] = {
+                            hex: value,
+                            rgb: convertHexToRgb(value)
+                        };
+                    }
+                    else if (fieldsContent[key].type === 'list.color' && value) {
+                        doc[key] = value.map((v: string) => ({
+                            hex: v,
+                            rgb: convertHexToRgb(v)
+                        }));
                     }
                     else {
                         doc[key] = value;

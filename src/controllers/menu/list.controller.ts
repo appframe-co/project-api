@@ -1,4 +1,5 @@
 import { TErrorResponse, TMenuOutput, TMenu, TItemOutput, TSection, TItem, TDoc, TFile, TTranslation, TContent } from "@/types/types";
+import { convertHexToRgb } from "@/utils/convert-hex-to-rgb";
 import { convertHTMLToObj } from "@/utils/convert-html-to-obj";
 
 function isErrorMenus(data: TErrorResponse | {menus: TMenu[]}): data is TErrorResponse {
@@ -129,6 +130,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
             
                             fileKeys.push(key);
                         }
+                        else if (fieldsContent[key].type === 'color' && value) {
+                            doc[key] = {
+                                hex: value,
+                                rgb: convertHexToRgb(value)
+                            };
+                        }
+                        else if (fieldsContent[key].type === 'list.color' && value) {
+                            doc[key] = value.map((v: string) => ({
+                                hex: v,
+                                rgb: convertHexToRgb(v)
+                            }));
+                        }
                         else {
                             doc[key] = value;
                         }
@@ -201,6 +214,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                             });
             
                             fileKeys.push(key);
+                        }
+                        else if (fieldsMenu[key].type === 'color' && value) {
+                            doc[key] = {
+                                hex: value,
+                                rgb: convertHexToRgb(value)
+                            };
+                        }
+                        else if (fieldsMenu[key].type === 'list.color' && value) {
+                            doc[key] = value.map((v: string) => ({
+                                hex: v,
+                                rgb: convertHexToRgb(v)
+                            }));
                         }
                         else {
                             doc[key] = value;
