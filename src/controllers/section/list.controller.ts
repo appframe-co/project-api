@@ -41,8 +41,8 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
     
         const content = dataFetchContents.contents[0];
      
-        const fieldsContent = content.sections.fields.reduce((acc: {[key:string]:{type:string}}, b) => {
-            acc[b.key] = {type: b.type};
+        const fieldsContent = content.sections.fields.reduce((acc: {[key:string]:{type:string, unit?:string}}, b) => {
+            acc[b.key] = {type: b.type, unit: b.unit};
             return acc;
         }, {});
 
@@ -113,6 +113,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                             rgb: convertHexToRgb(v)
                         }));
                     }
+                    else if ((fieldsContent[key].type === 'dimension' || fieldsContent[key].type === 'volume' || fieldsContent[key].type === 'weight') && value) {
+                        doc[key] = {
+                            value: value,
+                            unit: fieldsContent[key].unit
+                        };
+                    }
+                    else if ((fieldsContent[key].type === 'list.dimension' || fieldsContent[key].type === 'list.volume' || fieldsContent[key].type === 'list.weight') && value) {
+                        doc[key] = value.map((v: string) => ({
+                            value: v,
+                            unit: fieldsContent[key].unit
+                        }));
+                    }
                     else {
                         doc[key] = value;
                     }
@@ -178,6 +190,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                         doc[key] = value.map((v: string) => ({
                             hex: v,
                             rgb: convertHexToRgb(v)
+                        }));
+                    }
+                    else if ((fieldsContent[key].type === 'dimension' || fieldsContent[key].type === 'volume' || fieldsContent[key].type === 'weight') && value) {
+                        doc[key] = {
+                            value: value,
+                            unit: fieldsContent[key].unit
+                        };
+                    }
+                    else if ((fieldsContent[key].type === 'list.dimension' || fieldsContent[key].type === 'list.volume' || fieldsContent[key].type === 'list.weight') && value) {
+                        doc[key] = value.map((v: string) => ({
+                            value: v,
+                            unit: fieldsContent[key].unit
                         }));
                     }
                     else {

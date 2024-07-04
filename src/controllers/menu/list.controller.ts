@@ -45,8 +45,8 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
 
         const menu = dataFetchMenus.menus[0];
 
-        const fieldsMenu = menu.items.fields.reduce((acc: {[key:string]:{type:string}}, b) => {
-            acc[b.key] = {type: b.type};
+        const fieldsMenu = menu.items.fields.reduce((acc: {[key:string]:{type:string,unit?:string}}, b) => {
+            acc[b.key] = {type: b.type, unit: b.unit};
             return acc;
         }, {});
 
@@ -69,8 +69,8 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
 
                 const content = dataFetchContent.content;
 
-                const fieldsContent = content.sections.fields.reduce((acc: {[key:string]:{type:string}}, b) => {
-                    acc[b.key] = {type: b.type};
+                const fieldsContent = content.sections.fields.reduce((acc: {[key:string]:{type:string, unit?:string}}, b) => {
+                    acc[b.key] = {type: b.type, unit: b.unit};
                     return acc;
                 }, {});
 
@@ -140,6 +140,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                             doc[key] = value.map((v: string) => ({
                                 hex: v,
                                 rgb: convertHexToRgb(v)
+                            }));
+                        }
+                        else if ((fieldsContent[key].type === 'dimension' || fieldsContent[key].type === 'volume' || fieldsContent[key].type === 'weight') && value) {
+                            doc[key] = {
+                                value: value,
+                                unit: fieldsContent[key].unit
+                            };
+                        }
+                        else if ((fieldsContent[key].type === 'list.dimension' || fieldsContent[key].type === 'list.volume' || fieldsContent[key].type === 'list.weight') && value) {
+                            doc[key] = value.map((v: string) => ({
+                                value: v,
+                                unit: fieldsContent[key].unit
                             }));
                         }
                         else {
@@ -225,6 +237,18 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
                             doc[key] = value.map((v: string) => ({
                                 hex: v,
                                 rgb: convertHexToRgb(v)
+                            }));
+                        }
+                        else if ((fieldsMenu[key].type === 'dimension' || fieldsMenu[key].type === 'volume' || fieldsMenu[key].type === 'weight') && value) {
+                            doc[key] = {
+                                value: value,
+                                unit: fieldsMenu[key].unit
+                            };
+                        }
+                        else if ((fieldsMenu[key].type === 'list.dimension' || fieldsMenu[key].type === 'list.volume' || fieldsMenu[key].type === 'list.weight') && value) {
+                            doc[key] = value.map((v: string) => ({
+                                value: v,
+                                unit: fieldsMenu[key].unit
                             }));
                         }
                         else {

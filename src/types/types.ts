@@ -80,6 +80,7 @@ type TField = {
   key: string;
   description: string;
   validations: TValidationField[];
+  unit?: string;
 }
 
 type TValidationField = {
