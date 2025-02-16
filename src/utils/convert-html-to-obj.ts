@@ -14,7 +14,6 @@ export const convertHTMLToObj = (html: string) => {
         paragraphs.push(array1[1]);
     }
 
-    
     const dom = new JSDOM(`<!DOCTYPE html>`+html);
     const nodes = dom.window.document.querySelector('body')?.childNodes;
     const res: any = parseNodes(nodes, [], {});

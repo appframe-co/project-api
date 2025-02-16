@@ -97,6 +97,16 @@ export type TFile = {
   alt: string;
 }
 
+export type TTranslationOutput = {
+  id: string;
+  subjectId: string;
+  subject: string;
+  key: string;
+  doc: TValueTranslation;
+  lang: string;
+  created_at: Date;
+}
+
 export type TEntryOutput = {
   id: string;
   created_at: Date;
@@ -131,7 +141,7 @@ export type TTranslation = {
   key: string;
   value: TValueTranslation;
   lang: string;
-  createdAt?: string;
+  createdAt: Date;
 }
 
 export type TItemOutput = {

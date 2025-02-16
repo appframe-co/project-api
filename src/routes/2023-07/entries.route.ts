@@ -1,4 +1,4 @@
-import { TEntryInput, TEntryOutput } from '@/types/types';
+import { TEntryInput, TEntryOutput, TTranslationOutput } from '@/types/types';
 import express, { Request, Response, NextFunction } from 'express';
 
 import { List } from '@/controllers/entry/list.controller';
@@ -14,6 +14,11 @@ type TQueryList = {
     fields: string;
     ids: string;
     section_code: string;
+    translations: string;
+}
+type TOutput = {
+    entries: TEntryOutput[];
+    translations?: TTranslationOutput[];
 }
 
 router.post('/:code.json', async function (req: Request, res: Response, next: NextFunction) {
@@ -39,14 +44,14 @@ router.get('/:code.json', async function (req: Request, res: Response, next: Nex
     try {
         const {userId, projectId} = res.locals as {userId: string, projectId: string};
         const {code} = req.params as {code: string};
-        const {sinceId, limit=50, page=1, fields, ids, section_code:sectionCode, ...doc} = req.query as TQueryList;
+        const {sinceId, limit=50, page=1, fields, ids, section_code:sectionCode, translations, ...doc} = req.query as TQueryList;
 
-        const entries: TEntryOutput[] = await List(
+        const {entries, translations: translationsOutput}: TOutput = await List(
             {userId, projectId, code}, 
-            {sinceId, limit, page, fields, ids, sectionCode, doc}
+            {sinceId, limit, page, fields, ids, sectionCode, translations, doc}
         );
 
-        res.json({entries});
+        res.json({entries, translations: translationsOutput});
     } catch (e) {
         let message = 'error';
         if (e instanceof Error) {

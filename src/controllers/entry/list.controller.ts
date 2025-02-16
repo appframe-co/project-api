@@ -1,4 +1,4 @@
-import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation, TSection } from "@/types/types";
+import { TDoc, TEntry, TErrorResponse, TFile, TContent, TEntryOutput, TTranslation, TTranslationOutput, TSection } from "@/types/types";
 import { convertHexToRgb } from "@/utils/convert-hex-to-rgb";
 import { convertHTMLToObj } from "@/utils/convert-html-to-obj";
 
@@ -22,11 +22,17 @@ type TPayload = {
     fields: string;
     ids: string;
     sectionCode: string|null;
+    translations: string;
     doc: {[key:string]: string};
 }
 
-export async function List({userId, projectId, code}: {userId:string, projectId:string, code:string}, payload: TPayload): Promise<TEntryOutput[]> {
-    const {limit, page, sinceId, fields, ids, sectionCode, doc} = payload;
+type TOutput = {
+    entries: TEntryOutput[];
+    translations?: TTranslationOutput[];
+}
+
+export async function List({userId, projectId, code}: {userId:string, projectId:string, code:string}, payload: TPayload): Promise<TOutput> {
+    const {limit, page, sinceId, fields, ids, sectionCode, translations, doc} = payload;
 
     const arFields = fields ? fields.split(',') : [];
 
@@ -61,10 +67,10 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
         });
         const dataFetchSections: TErrorResponse|{sections: TSection[], parent: TSection|null} = await resFetchSections.json();
         if (isErrorSections(dataFetchSections)) {
-           return [];
+           return {entries: []};
         }
         if (!dataFetchSections.sections.length) {
-            return [];
+            return {entries: []};
          }
          
         const section = dataFetchSections.sections[0];
@@ -96,183 +102,141 @@ export async function List({userId, projectId, code}: {userId:string, projectId:
         throw new Error('Error entries');
     }
 
-    const output = [];
+    const fileTypes = ['file_reference', 'list.file_reference'];
+    let fileIds: string[] = [];
+    const entryIds: string[] = [];
+
+    const output: TOutput = {entries: []};
+
     for (let entry of dataFetchEntries.entries) {
         const doc: TDoc = {};
-        const fileKeys: string[] = [];
 
         for (const [key, value] of Object.entries(entry.doc)) {
             if (arFields.length > 0 && !arFields.includes(key)) {
                 continue;
             }
 
-            if (fieldsContent[key].type === 'rich_text' && value) {
-                doc[key] = {
-                    html: value,
-                    nodes: convertHTMLToObj(value)
-                };
-            }
-            else if (fieldsContent[key].type === 'file_reference' && value) {
-                const file: TFile = value;
-                doc[key] = {
-                    width: file.width,
-                    height: file.height,
-                    contentType: file.contentType,
-                    src: file.src,
-                    alt: file.alt
-                };
+            doc[key] = getField(fieldsContent[key].type, fieldsContent[key].unit, value);
 
-                fileKeys.push(key);
-            }
-            else if (fieldsContent[key].type === 'list.file_reference' && value) {
-                doc[key] = value.map((file: TFile) => {
-                    return {
-                        width: file.width,
-                        height: file.height,
-                        contentType: file.contentType,
-                        src: file.src,
-                        alt: file.alt
-                    }
-                });
-
-                fileKeys.push(key);
-            }
-            else if (fieldsContent[key].type === 'color' && value) {
-                doc[key] = {
-                    hex: value,
-                    rgb: convertHexToRgb(value)
-                };
-            }
-            else if (fieldsContent[key].type === 'list.color' && value) {
-                doc[key] = value.map((v: string) => ({
-                    hex: v,
-                    rgb: convertHexToRgb(v)
-                }));
-            }
-            else if ((fieldsContent[key].type === 'dimension' || fieldsContent[key].type === 'volume' || fieldsContent[key].type === 'weight') && value) {
-                doc[key] = {
-                    value: value,
-                    unit: fieldsContent[key].unit
-                };
-            }
-            else if ((fieldsContent[key].type === 'list.dimension' || fieldsContent[key].type === 'list.volume' || fieldsContent[key].type === 'list.weight') && value) {
-                doc[key] = value.map((v: string) => ({
-                    value: v,
-                    unit: fieldsContent[key].unit
-                }));
-            }
-            else {
-                doc[key] = value;
+            if (fileTypes.includes(fieldsContent[key].type)) {
+                if (Array.isArray(value)) {
+                    fileIds = [...fileIds, ...(value as TFile[]).map(v => v.id)];
+                } else {
+                    fileIds = [...fileIds, (value as TFile).id];
+                }
             }
         }
 
-        const translations = await getTranslations(
-            {enabled: content.translations?.enabled, fileKeys, entry, fieldsContent},
-            {userId, projectId, contentId: content.id, entryId: entry.id}
-        );
+        entryIds.push(entry.id);
 
-        output.push({
+        output.entries.push({
             id: entry.id,
             created_at: entry.createdAt,
             updated_at: entry.updatedAt,
-            doc,
-            ...translations
+            doc
         });
+    }
+
+    if (translations === 'y' && content.translations?.enabled) {
+        output.translations = [];
+
+        const resFetchTranslations = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/translations/ids?userId=${userId}&projectId=${projectId}&contentId=${content.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({entryIds, fileIds})
+        });
+        const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
+        if (!isErrorTranslations(dataFetchTranslations)) {
+            dataFetchTranslations.translations.forEach(t => {
+                const doc: TDoc = {};
+                for (const [key, value] of Object.entries(t.value)) {
+                    if (arFields.length > 0 && !arFields.includes(key)) {
+                        continue;
+                    }
+                    if (t.subject === 'entry') {
+                        doc[key] = getField(fieldsContent[key].type, fieldsContent[key].unit, value);
+                    } else {
+                        doc[key] = value;
+                    }
+                }
+
+                output.translations?.push({
+                    id: t.id,
+                    subjectId: t.subjectId,
+                    subject: t.subject,
+                    key: t.key,
+                    lang: t.lang,
+                    created_at: t.createdAt,
+                    doc
+                });
+            });
+        }
     }
 
     return output;
 }
 
-
-type TPropsTranslation = {
-    enabled: boolean;
-    fieldsContent: any;
-    entry: TEntry;
-    fileKeys: string[];
-}
-type TPropsPayloadTranslation = {
-    userId: string;
-    projectId: string; 
-    contentId: string; 
-    entryId: string; 
-}
-async function getTranslations({enabled, fileKeys, entry, fieldsContent}: TPropsTranslation, {userId, projectId, contentId, entryId}: TPropsPayloadTranslation) {
-    try {
-        const translations: any = {};
-
-        if (!enabled) {
-            return translations;
-        }
-
-        const resFetchTranslations = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&contentId=${contentId}&subjectId=${entryId}&subject=entry`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
-        if (!isErrorTranslations(dataFetchTranslations)) {
-            dataFetchTranslations.translations.forEach(t => {
-                translations['doc_' + t.lang] = {};
-                for (const [key, value] of Object.entries(t.value)) {
-                    if (fieldsContent[key].type === 'rich_text' && value) {
-                        translations['doc_' + t.lang][key] = {
-                            html: value,
-                            nodes: convertHTMLToObj(value)
-                        };
-                    } else {
-                        translations['doc_' + t.lang][key] = value;
-                    }
-                }
-            });
-        }
-
-        // File (ref field)
-        for (let key of fileKeys) {
-            const resFetchTranslations = await fetch(`${process.env.URL_CONTENT_SERVICE}/api/translations?userId=${userId}&projectId=${projectId}&contentId=${contentId}&subject=file&key=${key}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            const dataFetchTranslations: TErrorResponse|{translations: TTranslation[]} = await resFetchTranslations.json();
-            if (!isErrorTranslations(dataFetchTranslations)) {
-                dataFetchTranslations.translations.forEach(t => {
-                    if (translations['doc_' + t.lang] && !Array.isArray(translations['doc_' + t.lang][key])) {
-                        translations['doc_' + t.lang] = {
-                            ...translations['doc_' + t.lang],
-                            [key]: {
-                                ...translations['doc_' + t.lang][key],
-                                ...t.value
-                            }
-                        }
-                    } else {
-                        const index: number = entry.doc[key].findIndex((v: TFile) => v.id === t.subjectId);
-                        if (index !== -1) {
-                            const arr = translations['doc_' + t.lang][key].map((f:any, i: number)=> {
-                                if (i === index) {
-                                    return {
-                                        ...f, 
-                                        ...t.value
-                                    }
-                                }
-                                return {
-                                    ...f
-                                }
-                            })
-
-                            translations['doc_' + t.lang] = {
-                                ...translations['doc_' + t.lang],
-                                [key]: arr
-                            };
-                        }
-                    }
-                });
-            }
-        }
-
-        return translations;
-    } catch (e) {
-        return {};
+function getField(type:string, unit: string|undefined, value:any): any {
+    if (!value) {
+        return null;
     }
+ 
+    if (type === 'rich_text') {
+        return {
+            html: value,
+            nodes: convertHTMLToObj(value)
+        };
+    }
+    
+    if (type === 'file_reference') {
+        return {
+            width: value.width,
+            height: value.height,
+            contentType: value.contentType,
+            src: value.src,
+            alt: value.alt
+        };
+    }
+    
+    if (type === 'list.file_reference') {
+        return value.map((file: TFile) => ({
+            width: file.width,
+            height: file.height,
+            contentType: file.contentType,
+            src: file.src,
+            alt: file.alt
+        }));
+    }
+    
+    if (type === 'color') {
+        return {
+            hex: value,
+            rgb: convertHexToRgb(value)
+        };
+    }
+    
+    if (type === 'list.color') {
+        return value.map((v: string) => ({
+            hex: v,
+            rgb: convertHexToRgb(v)
+        }));
+    }
+
+    if ((type === 'dimension' || type === 'volume' || type === 'weight')) {
+        return {
+            value,
+            unit
+        };
+    }
+    
+    if ((type === 'list.dimension' || type === 'list.volume' || type === 'list.weight')) {
+        return value.map((v: string) => ({
+            value: v,
+            unit
+        }));
+    }
+
+    return value;
 }
